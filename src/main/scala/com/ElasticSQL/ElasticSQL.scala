@@ -57,11 +57,11 @@ class ElasticSQLParser() {
 		var filter:FilterBuilder = clause match {
 			case or:Or => processOr(or);
 			case and:And => processAnd(and);
-			case stringEq:StringEquals => processStringEquals(stringEq);
-			//case StringEquals(field, value) => "%s = %s".format(field, quote(value))
-		    //case BooleanEquals(field, value) => "%s = %s".format(field, value)
-		    //case NumberEquals(field, value) => "%s = %s".format(field, value)
-		    //case in:In => "%s in (%s)".format(in.field, in.values.map(quote(_)).mkString(","))
+			case stringEq:StringEquals => termFilter(stringEq.f, stringEq.value);
+			case boolEq:BooleanEquals => termFilter(boolEq.f, boolEq.value);
+			case numEq:NumberEquals => termFilter(numEq.f, numEq.value);
+		    case in:InString => termsFilter(in.field, in.values:_*);
+		    case in:InNumber => termsFilter(in.field, in.values:_*);
 		    case _ => throw new IllegalArgumentException("Clause %s not implemented".format(clause))
 		}
 		addToFilter(filter,parent);
@@ -81,11 +81,6 @@ class ElasticSQLParser() {
 		return filter;
 	}
 
-	protected def processStringEquals(clause:StringEquals):FilterBuilder={
-		val filter = termFilter(clause.f, clause.value);
-		return filter;
-	}
-	
 	protected def addToFilter(addFilter:FilterBuilder, parentFilter:FilterBuilder){
 		parentFilter match {
 			case or:OrFilterBuilder => or.add(addFilter);
