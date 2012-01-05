@@ -8,6 +8,10 @@ import org.elasticsearch.index.query.FilterBuilders._
 import org.elasticsearch.index.query.FilterBuilder
 import org.elasticsearch.index.query.AndFilterBuilder
 import org.elasticsearch.index.query.OrFilterBuilder
+import org.elasticsearch.search.sort.SortBuilders._
+import org.elasticsearch.search.sort.SortBuilder
+import org.elasticsearch.search.sort.SortOrder
+import org.elasticsearch.search.sort.FieldSortBuilder
 
 class ElasticSQLParser() {
 
@@ -17,6 +21,8 @@ class ElasticSQLParser() {
 	var esType:String=null;
 	var esQuery:QueryBuilder = null;
 	var esSort:SortBuilder = null;
+	var limit:Int = 0;
+	var start:Int = 0;
 	
 	def parse(sql:String):Unit={
 		if (null == sql || sql.isEmpty()) throw new IllegalArgumentException("sql is empty");
@@ -30,6 +36,8 @@ class ElasticSQLParser() {
 		getType(query);
 		getFields(query);
 		getQuery(query);
+		getOrder(query);
+		getLimit(query);
 	}
 	
 	protected def getType(query:Query){
@@ -50,6 +58,23 @@ class ElasticSQLParser() {
 			val filter = andFilter();
 			query.where.get.clauses.foreach(processClause(_,filter));
 			esQuery = constantScoreQuery(filter);
+		}
+	}
+	
+	protected def getOrder(query:Query){
+		esSort = query.order match {
+			case Some(direction) => direction match {
+				case Asc(field) => fieldSort(field).order(SortOrder.ASC);
+				case Desc(field) => fieldSort(field).order(SortOrder.DESC);
+			}
+			case None => null;
+		}
+	}
+	
+	protected def getLimit(query:Query){
+		limit = query.limit match {
+			case Some(l) => l.limit;
+			case None => 0;
 		}
 	}
 	
