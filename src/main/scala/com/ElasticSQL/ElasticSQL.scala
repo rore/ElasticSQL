@@ -27,7 +27,7 @@ class ElasticSQLParser() {
 	def parse(sql:String):Unit={
 		if (null == sql || sql.isEmpty()) throw new IllegalArgumentException("sql is empty");
 		val query = _parser.parse(sql).getOrElse(null);
-		if (null == query) throw new IllegalArgumentException("failed parsing sql");
+		if (null == query) throw new IllegalArgumentException("failed parsing sql: " + _parser.lastError.getOrElse(null));
 		parse(query);
 	}
 	
@@ -82,11 +82,19 @@ class ElasticSQLParser() {
 		var filter:FilterBuilder = clause match {
 			case or:Or => processOr(or);
 			case and:And => processAnd(and);
-			case stringEq:StringEquals => termFilter(stringEq.f, stringEq.value);
-			case boolEq:BooleanEquals => termFilter(boolEq.f, boolEq.value);
-			case numEq:NumberEquals => termFilter(numEq.f, numEq.value);
+			case stringEq:StringEquals => termFilter(stringEq.field, stringEq.value);
+			case boolEq:BooleanEquals => termFilter(boolEq.field, boolEq.value);
+			case numEq:NumberEquals => termFilter(numEq.field, numEq.value);
 		    case in:InString => termsFilter(in.field, in.values:_*);
 		    case in:InNumber => termsFilter(in.field, in.values:_*);
+		    case gts:GTString => rangeFilter(gts.field).gt(gts.value);
+		    case gtes:GTEString => rangeFilter(gtes.field).gte(gtes.value);
+		    case lts:LTString => rangeFilter(lts.field).lt(lts.value);
+		    case ltes:LTEString => rangeFilter(ltes.field).lte(ltes.value);
+		    case gtn:GTNumber => rangeFilter(gtn.field).gt(gtn.value);
+		    case gten:GTENumber => rangeFilter(gten.field).gte(gten.value);
+		    case ltn:LTNumber => rangeFilter(ltn.field).lt(ltn.value);
+		    case lten:LTENumber => rangeFilter(lten.field).lte(lten.value);
 		    case _ => throw new IllegalArgumentException("Clause %s not implemented".format(clause))
 		}
 		addToFilter(filter,parent);
